@@ -1,0 +1,24 @@
+# .htaccess - Simple Configuration for Nextbike Assistant
+
+# Prevent directory listing
+Options -Indexes
+
+# Protect against XSS attacks
+<IfModule mod_headers.c>
+    Header set X-XSS-Protection "1; mode=block"
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "SAMEORIGIN"
+    Header set Referrer-Policy "strict-origin-when-cross-origin"
+
+    # Content Security Policy
+    Header set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com https://cdn.tailwindcss.com; style-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com; img-src 'self' data:; connect-src 'self';"
+</IfModule>
+
+# Prevent access to backup files
+<FilesMatch "\.(bak|backup|old|~|sql|zip|tar|gz)$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Protect against clickjacking
+Header always append X-Frame-Options SAMEORIGIN
