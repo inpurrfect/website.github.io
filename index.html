@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nextbike Email Assistant</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Mako&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+<div id="loading-screen">
+    <div class="loading-container">
+        <div class="loading-spinner"></div>
+        <h2 class="loading-text">Loading Nextbike Assistant</h2>
+        <p class="loading-subtext">Preparing your email helper...</p>
+    </div>
+</div>
+
+<div id="app-screen" style="display: none;">
+    <div id="root"></div>
+</div>
+
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script type="text/babel" src="app.js"></script>
+
+<script>
+    window.addEventListener('load', function() {
+        setTimeout(function() {
+            document.getElementById('loading-screen').style.opacity = '0';
+            document.getElementById('app-screen').style.display = 'block';
+            setTimeout(function() {
+                document.getElementById('loading-screen').style.display = 'none';
+            }, 500);
+        }, 800);
+    });
+</script>
+</body>
+</html>
