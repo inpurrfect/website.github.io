@@ -121,14 +121,20 @@ function calculateMatchScore(emailText, template, rentalData = null) {
     keywords.forEach(keyword => {
         const lowerKeyword = keyword.toLowerCase();
         // Exact word match (with word boundaries)
-        const exactRegex = new RegExp('\\\\b' + lowerKeyword.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&') + '\\\\b', 'i');
-                } else if (combinedText.includes(lowerKeyword)) {
-            const baseScore = Math.round((matches / keywords.length) * 100);
-    const bonusScore = Math.round((exactMatches / keywords.length) * 30); // Up to 30% bonus
+        const exactRegex = new RegExp('\\b' + lowerKeyword.replace(/[.*+?^${}()|[\\]\\]/g, '\\$&') + '\\b', 'i');
+        if (exactRegex.test(combinedText)) {
+            exactMatches++;
+            matches++;
+        } else if (combinedText.includes(lowerKeyword)) {
+            matches++;
+        }
+    });
+    
+    // Weighted scoring: exact matches count more
+    const baseScore = Math.round((matches / keywords.length) * 100);
+    const bonusScore = Math.round((exactMatches / keywords.length) * 30);
     
     return Math.min(baseScore + bonusScore, 100);
-}s(k)).length;
-    return Math.min(Math.round((matches / keywords.length) * 100), 100);
 }
 
 function generateSimpleSummary(text) {
@@ -1001,8 +1007,8 @@ async function fetchNextbikeRental(rentalId) {
             return null;
         }
     } catch (error) {
-        console.error('Network error fetching rental:', error);
-        return null;
+            console.log('Rental data fetching not available (PHP required). This is normal on GitHub Pages.');
+            return null;
     }
 }
 
