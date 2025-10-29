@@ -1,0 +1,13 @@
+{
+  "templates": {
+    "Your Template Name": {
+      "de": "German text here",
+      "en": "English text here",
+      "category": "Category Name",
+      "keywords": "keyword1,keyword2,keyword3"
+    }
+  },
+  "categories": [
+    { "name": "Category Name", "color": "#3b82f6" }
+  ]
+}

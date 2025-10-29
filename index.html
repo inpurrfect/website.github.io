@@ -3,14 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nextbike Email Assistant</title>
+    <title>Nextbike Email Assistant - Enhanced</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Mako&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
 </head>
-<body>
+<body class="font-sans">
+<!-- Loading Screen -->
 <div id="loading-screen">
     <div class="loading-container">
         <div class="loading-spinner"></div>
@@ -19,15 +32,20 @@
     </div>
 </div>
 
+<!-- Main App -->
 <div id="app-screen" style="display: none;">
     <div id="root"></div>
 </div>
 
+<!-- React and Babel -->
 <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+<!-- Main Application Script -->
 <script type="text/babel" src="app.js"></script>
 
+<!-- Loading Screen Handler -->
 <script>
     window.addEventListener('load', function() {
         setTimeout(function() {
@@ -36,7 +54,7 @@
             setTimeout(function() {
                 document.getElementById('loading-screen').style.display = 'none';
             }, 500);
-        }, 800);
+        }, 1000);
     });
 </script>
 </body>
