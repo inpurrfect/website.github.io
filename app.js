@@ -86,16 +86,52 @@ function extractInfo(text) {
         problem: problemMatch ? problemMatch[1] : null,
         customerMessage: customerMessage,
         messageLanguage: messageLanguage,
-        crashDetected: foundCrash,
-        crashKeywords: crashKeywords.filter(k => textLower.includes(k))
-    };
-}
-
-function calculateMatchScore(emailText, template) {
+        crashDetected: foundCfunction calculateMatchScore(emailText, template, rentalData = null) {
     if (!emailText || !template.keywords) return 0;
-    const emailLower = emailText.toLowerCase();
-    const keywords = template.keywords.toLowerCase().split(',').map(k => k.trim());
-    let matches = keywords.filter(k => emailLower.includes(k)).length;
+    
+    // Combine email text with rental data for better matching
+    let combinedText = emailText.toLowerCase();
+    
+    if (rentalData) {
+        // Extract relevant text from rental data
+        const rentalText = [
+            rentalData.comment || '',
+            rentalData.customer_name || '',
+            rentalData.problem || '',
+            rentalData.start_location || '',
+            rentalData.end_location || '',
+            rentalData.system || '',
+            rentalData.city || ''
+        ].filter(t => t).join(' ').toLowerCase();
+        
+        combinedText = combinedText + ' ' + rentalText;
+    }
+    
+    const keywords = template.keywords.toLowerCase().split(',').map(k => k.trim()).filter(k => k);
+    if (keywords.length === 0) return 0;
+    
+    // Calculate matches - give more weight to exact matches
+    let matches = 0;
+    let exactMatches = 0;
+    
+    keywords.forEach(keyword => {
+        const lowerKeyword = keyword.toLowerCase();
+        // Exact word match (with word boundaries)
+        const exactRegex = new RegExp('\\b' + lowerKeyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i');
+        if (exactRegex.test(combinedText)) {
+            exactMatches++;
+            matches++;
+        } else if (combinedText.includes(lowerKeyword)) {
+            matches++;
+        }
+    });
+    
+    // Weighted scoring: exact matches count more
+    const baseScore = Math.round((matches / keywords.length) * 100);
+    const bonusScore = Math.round((exactMatches / keywords.length) * 30); // Up to 30% bonus
+    
+    return Math.min(baseScore + bonusScore, 100);
+}r.includes(k)).length;
     return Math.min(Math.round((matches / keywords.length) * 100), 100);
 }
 
@@ -132,11 +168,11 @@ function NextbikeEmailHelper() {
     const [copiedField, setCopiedField] = useState('');
     const [showTemplateManager, setShowTemplateManager] = useState(false);
     const [showSettings, setShowSettings] = useState(false);
-    const [showStatistics, setShowStatistics] = useState(false);
-    const [templateSearch, setTemplateSearch] = useState('');
-    const [translatedText, setTranslatedText] = useState('');
-    const [isTranslating, setIsTranslating] = useState(false);
-    const [aiSummary, setAiSummary] = useState('');
+      const [translatedText, setTranslatedText] = useState('');
+    const [suggestions, setSuggestions] = useState([]);
+    const [recentTemplates, setRecentTemplates] = useState([]);
+    const [rentalData, setRentalData] = useState(null);
+    const [nextbikeCredentials, setNextbikeCredentials] = useState({ username: '', password: '' });te('');
     const [suggestions, setSuggestions] = useState([]);
     const [recentTemplates, setRecentTemplates] = useState([]);
 
@@ -226,7 +262,7 @@ function NextbikeEmailHelper() {
         return () => window.removeEventListener('keydown', handleKeyPress);
     }, [emailContent, filledTemplate]);
 
-    const handleExtract = () => {
+    const handleExtract = async () => {
         if (!emailContent || emailContent.trim().length < 10) {
             alert('Please paste valid email content');
             return;
@@ -240,12 +276,26 @@ function NextbikeEmailHelper() {
             setSelectedLanguage(data.messageLanguage);
         }
 
-        setAiSummary(generateSimpleSummary(emailContent));
+        // Try to fetch rental data if rental ID is found
+        let rentalInfo = null;
+        if (data.rentalId) {
+            try {
+                rentalInfo = await fetchNextbikeRental(data.rentalId);
+                if (rentalInfo) {
+                    setRentalData(rentalInfo);
+                }
+            } catch (error) {
+                console.log('Could not fetch rental data:', error);
+            }
+        }
 
+        setAiSummary(generateSimpleSummary(emailContent, rentalInfo));
+
+        // Enhanced template matching with rental data
         const scored = Object.entries(templates).map(([name, template]) => ({
             name,
             template,
-            score: calculateMatchScore(emailContent, template)
+            score: calculateMatchScore(emailContent, template, rentalInfo)
         })).filter(item => item.score > 0).sort((a, b) => b.score - a.score).slice(0, 5);
 
         setSuggestions(scored);
@@ -253,31 +303,88 @@ function NextbikeEmailHelper() {
         if (scored.length > 0 && scored[0].score >= 50) {
             setSelectedCategory(scored[0].template.category);
             setSelectedTemplate(scored[0].name);
-            setFilledTemplate(data.messageLanguage === 'de' ? scored[0].template.de : scored[0].template.en);
+            let templateText = data.messageLanguage === 'de' ? scored[0].template.de : scored[0].template.en;
+            // Auto-fill template with rental data if available
+            if (rentalInfo) {
+                templateText = fillTemplateWithRentalData(templateText, rentalInfo);
+            }
+            setFilledTemplate(templateText);
         }
     };
 
-    const translateToPolish = async (text, sourceLang) => {
+    const fillTemplateWithRentalData = (template, rental) => {
+        let filled = template;
+        // Replace common placeholders
+        const replacements = {
+            '<System>': rental.system || '<System>',
+            '<Stadt>': rental.city || '<Stadt>',
+            '<City>': rental.city || '<City>',
+            '<Bike>': rental.start_location || rental.rental_number || '<Bike>',
+            '<Datum>': rental.start_time ? rental.start_time.split(' ')[0] : '<Datum>',
+            '<Date>': rental.start_time ? rental.start_time.split(' ')[0] : '<Date>',
+            '<Uhrzeit>': rental.start_time ? rental.start_time.split(' ')[1] : '<Uhrzeit>',
+            '<Time>': rental.start_time ? rental.start_time.split(' ')[1] : '<Time>',
+            '<Distanz>': rental.distance_km || '<Distanz>',
+            '<Distance>': rental.distance_km || '<Distance>',
+            '<Betrag>': rental.adjusted_base_price || rental.base_price || '<Betrag>',
+            '<Amount>': rental.adjusted_base_price || rental.base_price || '<Amount>',
+            '<Kundenname>': rental.customer_name || '<Kundenname>',
+            '<Customer>': rental.customer_name || '<Customer>',
+        };
+        
+        Object.keys(replacements).forEach(placeholder => {
+            filled = filled.replace(new RegExp(placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), replacements[placeholder]);
+        });
+        
+        return filled;
+    };) {
+            setSelectedCateg    const translateToPolish = async (text, sourceLang) => {
+        if (!text || !text.trim()) {
+            alert('No text to translate');
+            return;
+        }
+        
         if (!deeplApiKey) {
             alert('Please set your DeepL API key in Settings!');
             return;
         }
+        
         setIsTranslating(true);
         try {
-            const response = await fetch('https://api-free.deepl.com/v2/translate', {
+            // Try both free and paid API endpoints
+            const apiUrl = deeplApiKey.includes('free') || deeplApiKey.startsWith('free') 
+                ? 'https://api-free.deepl.com/v2/translate'
+                : 'https://api.deepl.com/v2/translate';
+            
+            const response = await fetch(apiUrl, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 body: new URLSearchParams({
-                    'auth_key': deeplApiKey,
+                    'auth_key': deeplApiKey.trim(),
                     'text': text,
-                    'source_lang': sourceLang.toUpperCase(),
+                    'source_lang': sourceLang ? sourceLang.toUpperCase() : 'AUTO',
                     'target_lang': 'PL'
                 })
             });
+            
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`HTTP ${response.status}: ${errorText}`);
+            }
+            
             const data = await response.json();
             if (data.translations && data.translations[0]) {
                 setTranslatedText(data.translations[0].text);
             } else {
+                throw new Error('Translation response format error: ' + JSON.stringify(data));
+            }
+        } catch (error) {
+            console.error('Translation error:', error);
+            alert('Translation error: ' + error.message + '\n\nPlease check your DeepL API key and ensure it is valid.');
+        } finally {
+            setIsTranslating(false);
+        }
+    };            } else {
                 alert('Translation failed');
             }
         } catch (error) {
@@ -826,18 +933,33 @@ function NextbikeEmailHelper() {
                                             <Icons.Trash2 className="w-4 h-4" /> Delete
                                         </button>
                                     </div>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
-                )}
-            </div>
+                         // Fetch rental data from Nextbike
+async function fetchNextbikeRental(rentalId) {
+    if (!rentalId) return null;
+    
+    try {
+        const response = await fetch(`nextbike-fetcher.php?action=fetch_rental&id=${rentalId}`, {
+            method: 'GET',
+            credentials: 'include'
+        });
 
-            {/* Footer */}
-            <footer className={`fixed bottom-0 left-0 right-0 shadow-lg border-t-2 py-3 ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-indigo-200'}`}>
-                <div className="max-w-7xl mx-auto px-6">
-                    <div className={`text-center text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                        Made with ❤️ by Kasjan Bystrowski | Shortcuts: Ctrl+Enter (Extract) | Ctrl+Shift+C (Copy)
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+
+        if (data.success && data.rental) {
+            return data.rental;
+        } else {
+            console.error('Failed to fetch rental:', data.error || 'Unknown error');
+            return null;
+        }
+    } catch (error) {
+        console.error('Network error fetching rental:', error);
+        return null;
+    }
+}) | Ctrl+Shift+C (Copy)
                     </div>
                 </div>
             </footer>
