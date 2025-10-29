@@ -86,7 +86,11 @@ function extractInfo(text) {
         problem: problemMatch ? problemMatch[1] : null,
         customerMessage: customerMessage,
         messageLanguage: messageLanguage,
-        crashDetected: foundCfunction calculateMatchScore(emailText, template, rentalData = null) {
+        crashDetected: foundCrash
+    };
+}
+
+function calculateMatchScore(emailText, template, rentalData = null) {
     if (!emailText || !template.keywords) return 0;
     
     // Combine email text with rental data for better matching
@@ -117,21 +121,13 @@ function extractInfo(text) {
     keywords.forEach(keyword => {
         const lowerKeyword = keyword.toLowerCase();
         // Exact word match (with word boundaries)
-        const exactRegex = new RegExp('\\b' + lowerKeyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i');
-        if (exactRegex.test(combinedText)) {
-            exactMatches++;
-            matches++;
-        } else if (combinedText.includes(lowerKeyword)) {
-            matches++;
-        }
-    });
-    
-    // Weighted scoring: exact matches count more
-    const baseScore = Math.round((matches / keywords.length) * 100);
+        const exactRegex = new RegExp('\\\\b' + lowerKeyword.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&') + '\\\\b', 'i');
+                } else if (combinedText.includes(lowerKeyword)) {
+            const baseScore = Math.round((matches / keywords.length) * 100);
     const bonusScore = Math.round((exactMatches / keywords.length) * 30); // Up to 30% bonus
     
     return Math.min(baseScore + bonusScore, 100);
-}r.includes(k)).length;
+}s(k)).length;
     return Math.min(Math.round((matches / keywords.length) * 100), 100);
 }
 
@@ -164,15 +160,14 @@ function NextbikeEmailHelper() {
     const [selectedCategory, setSelectedCategory] = useState('');
     const [selectedTemplate, setSelectedTemplate] = useState('');
     const [selectedLanguage, setSelectedLanguage] = useState('de');
-    const [filledTemplate, setFilledTemplate] = useState('');
-    const [copiedField, setCopiedField] = useState('');
     const [showTemplateManager, setShowTemplateManager] = useState(false);
     const [showSettings, setShowSettings] = useState(false);
-      const [translatedText, setTranslatedText] = useState('');
-    const [suggestions, setSuggestions] = useState([]);
-    const [recentTemplates, setRecentTemplates] = useState([]);
+    const [showStatistics, setShowStatistics] = useState(false);
+    const [translatedText, setTranslatedText] = useState('');
+    const [isTranslating, setIsTranslating] = useState(false);
+    const [aiSummary, setAiSummary] = useState('');
+    const [templateSearch, setTemplateSearch] = useState('');
     const [rentalData, setRentalData] = useState(null);
-    const [nextbikeCredentials, setNextbikeCredentials] = useState({ username: '', password: '' });te('');
     const [suggestions, setSuggestions] = useState([]);
     const [recentTemplates, setRecentTemplates] = useState([]);
 
@@ -332,8 +327,10 @@ function NextbikeEmailHelper() {
             '<Customer>': rental.customer_name || '<Customer>',
         };
         
-        Object.keys(replacements).forEach(placeholder => {
-            filled = filled.replace(new RegExp(placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), replacements[placeholder]);
+        Ob        return filled;
+    };
+
+    const translateToPolish = async (text, sourceLang) => {+?^${}()|[\]\\]/g, '\\$&'), 'g'), replacements[placeholder]);
         });
         
         return filled;
@@ -373,19 +370,14 @@ function NextbikeEmailHelper() {
             }
             
             const data = await response.json();
-            if (data.translations && data.translations[0]) {
-                setTranslatedText(data.translations[0].text);
-            } else {
-                throw new Error('Translation response format error: ' + JSON.stringify(data));
-            }
-        } catch (error) {
+            if (data.translations && data.transla        } catch (error) {
             console.error('Translation error:', error);
-            alert('Translation error: ' + error.message + '\n\nPlease check your DeepL API key and ensure it is valid.');
+            alert('Translation error: ' + error.message + '\\n\\nPlease check your DeepL API key and ensure it is valid.');
         } finally {
             setIsTranslating(false);
         }
-    };            } else {
-                alert('Translation failed');
+    };        }
+    };     alert('Translation failed');
             }
         } catch (error) {
             alert('Translation error: ' + error.message);
@@ -926,14 +918,7 @@ function NextbikeEmailHelper() {
                                 {Object.entries(templates).filter(([name, t]) => !templateSearch || name.toLowerCase().includes(templateSearch.toLowerCase()) || t.category.toLowerCase().includes(templateSearch.toLowerCase())).map(([name, t]) => (
                                     <div key={name} className={`flex items-center justify-between p-3 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-50'}`}>
                                         <div>
-                                            <div className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-800'}`}>{name}</div>
-                                            <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>{t.category}</div>
-                                        </div>
-                                        <button onClick={() => deleteTemplate(name)} className="px-3 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 flex items-center gap-2">
-                                            <Icons.Trash2 className="w-4 h-4" /> Delete
-                                        </button>
-                                    </div>
-                         // Fetch rental data from Nextbike
+                                            <div className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-800'}`}>{name}</di// Fetch rental data from Nextbike  
 async function fetchNextbikeRental(rentalId) {
     if (!rentalId) return null;
     
@@ -944,7 +929,16 @@ async function fetchNextbikeRental(rentalId) {
         });
 
         if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            // GitHub Pages doesn't support PHP, so this will fail gracefully
+            console.log('PHP backend not available (expected on GitHub Pages). Rental fetching disabled.');
+            return null;
+        }
+
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            // If PHP doesn't execute, we get HTML instead of JSON
+            console.log('PHP backend not available (expected on GitHub Pages). Rental fetching disabled.');
+            return null;
         }
 
         const data = await response.json();
@@ -956,11 +950,32 @@ async function fetchNextbikeRental(rentalId) {
             return null;
         }
     } catch (error) {
-        console.error('Network error fetching rental:', error);
+        // Silently fail on GitHub Pages where PHP isn't available
+        console.log('Rental data fetching not available (PHP required). This is normal on GitHub Pages.');
         return null;
     }
-}) | Ctrl+Shift+C (Copy)
+}
+
+// Render
+ReactDOM.render(<NextbikeEmailHelper />, document.getElementById('root'));0 text-white rounded-lg hover:bg-red-600 flex items-center gap-2">
+                                            <Icons.Trash2 className="w-4 h-4" /> Delete
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
                     </div>
+                )}
+            </div>
+        </div>
+    );
+}
+
+// Fetch rental data from Nextbike  
+async function fetchNextbikeRental(rentalId) {
+    if (!rentalId) return null;
+            // If PHP doesn't execute, we get HTML instead of JSON
+            console.log('PHP                 </div>
                 </div>
             </footer>
         </div>
